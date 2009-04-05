@@ -10,6 +10,12 @@ is_installed() {
     prog="$1"
     [ -z "$prog" ] && return 1
 
+    case "${prog}" in
+        /*) # deal with absolute-path programs
+            [ -x "${prog}" ] && return 0
+            return 1 ;;
+    esac
+
     ret=1
     oifs="$IFS"
     IFS=:
