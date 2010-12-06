@@ -5,7 +5,7 @@ Michael Gebetsroither <gebi@grml.org>
 
 NAME
 ----
-grml-chroot - Wrapper around chroot with proc/sys/pts/dev filesystem handling
+grml-chroot - Wrapper around chroot with proc/sys/dev filesystem handling
 
 
 SYNOPSIS
@@ -16,7 +16,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 *grml-chroot* is a wrapper
-around plain chroot with integrated proc/sys/pts/dev filesystem handling.
+around plain chroot with integrated proc/sys/dev filesystem handling.
 After _COMMAND_ exits, mounts are cleaned up properly.
 
 If _COMMAND_ is omitted, the shell of user *root* of the target filesystem is used.
@@ -31,8 +31,8 @@ Show summary of options.
 EXAMPLES
 --------
 
-*grml-chroot* '/mnt/hda1'::
-    Mounts proc/sys/pts/dev into /mnt/hda1/{proc/sys/dev} and gives you a chrooted shell.
+*grml-chroot* '/mnt/sda1'::
+    Mounts proc/sys/dev into /mnt/sda1/{proc/sys/dev} and gives you a chrooted shell.
 
 
 SEE ALSO
