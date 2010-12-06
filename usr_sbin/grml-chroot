@@ -89,7 +89,8 @@ mountit "proc"  "proc"
 mountit "sysfs" "sys"
 mountit "/dev"   "dev"   "--bind"
 if (( $# < 1 )); then
-    chroot "$DEST_"
+    shell=$(awk '/^root:/{ split($0,a,":"); print a[7] }' < "$DEST_/etc/passwd")
+    chroot "$DEST_" "$shell"
     RC=$?
 else
     chroot "$DEST_" "$@"

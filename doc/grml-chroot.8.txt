@@ -19,6 +19,8 @@ DESCRIPTION
 around plain chroot with integrated proc/sys/pts/dev filesystem handling.
 After _COMMAND_ exits, mounts are cleaned up properly.
 
+If _COMMAND_ is omitted, the shell of user *root* of the target filesystem is used.
+
 
 OPTIONS
 -------
