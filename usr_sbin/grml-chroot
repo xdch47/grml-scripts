@@ -10,11 +10,27 @@ PROG_NAME_=$(basename $0)
 DEST_=""
 MOUNTED_=""     # all mounted destinations
 
+function bailout
+{
+  umount_all
+  die "Bailout"
+}
+trap bailout 1 2 3 3 6 9 14 15
 
 function die
 {
     echo "Error: $@" >&2
     exit 1
+}
+
+function isMounted
+{
+    local dir="$1"
+    if cut -d\  -f 2 /proc/mounts | grep -q "$dir"; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 function printUsage
@@ -45,19 +61,23 @@ function mountit
 
     local all_options_=""
 
-    if [[ $options_ == "--bind" ]]; then
+    if ! isMounted "${DEST_}/$dest_"; then
+      if [[ $options_ == "--bind" ]]; then
         all_options_="--bind $type_"
-    else
+      else
         all_options_="-t $type_ none"
+      fi
+      mount $all_options_ "${DEST_}/$dest_" && storeMounts "$dest_"
     fi
-    mount $all_options_ "${DEST_}/$dest_" && storeMounts "$dest_"
 }
 
 function umount_all
 {
-    for i in $MOUNTED_; do
-        umount "${DEST_}/$i"
+    for i in /proc /sys /dev; do
+        umount "${DEST_}/${i}"
     done
+
+    rm -f "$DEST_"/etc/debian_chroot
 }
 
 
@@ -89,9 +109,14 @@ mountit "proc"  "proc"
 mountit "sysfs" "sys"
 mountit "/dev"   "dev"   "--bind"
 
-WROTE_DEBIAN_CHROOT=""
-if [ ! -f "$DEST_"/etc/debian_chroot ]; then
-    WROTE_DEBIAN_CHROOT="yes"
+# do not write to /var/run of chroot if it's not present
+if [ -d "$DEST_/tmp" ] ; then
+  STATEDIR="tmp/grml-chroot"
+  mkdir -p "$DEST_/$STATEDIR"
+  touch "$DEST_/$STATEDIR/$$"
+fi
+
+if [ ! -e "$DEST_"/etc/debian_chroot ]; then
     echo "Writing /etc/debian_chroot ..."
     cat "$DEST_"/etc/hostname > "$DEST_"/etc/debian_chroot
 fi
@@ -103,10 +128,15 @@ else
     chroot "$DEST_" "$@"
     RC=$?
 fi
-umount_all
 
-if [ ! -z "$WROTE_DEBIAN_CHROOT" ]; then
-    rm "$DEST_"/etc/debian_chroot
+if [ -z "$STATEDIR" ] ; then
+  umount_all
+else
+  rm "$DEST_/$STATEDIR/$$"
+
+  if rmdir "$DEST_/$STATEDIR" 2>/dev/null; then
+    umount_all
+  fi
 fi
 
 exit $RC
