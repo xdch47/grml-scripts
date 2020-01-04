@@ -1,7 +1,7 @@
 #!/bin/bash
 # Filename:      grml-lang
 # Purpose:       load specific keyboard layout settings
-# Authors:       grml-team (grml.org), (c) Michael Prokop <mika@grml.org>
+# Authors:       grml-team (grml.org), (c) Michael Prokop <mika@grml.org>, (c) Christian Haase
 # Bug-Reports:   see http://grml.org/bugs/
 # License:       This file is licensed under the GPL v2.
 ################################################################################
@@ -15,124 +15,43 @@ usage(){
 }
 
 setvalue(){
-  [ -n "$2" ] || return 1
-  sudo sed -i "s#^${1}=.*#${1}=\"${2}\"#" "${CONFFILE}"
+  # already present in conffile?
+  if grep -q ${1} $CONFFILE 2>/dev/null ; then
+     sudo sed -i "s#^${1}.*#${1}=${2}#"   $CONFFILE
+  else
+     echo "$1=${2}" | sudo tee -a $CONFFILE >/dev/null
+  fi
 }
 
 if [ $# -lt "1" ] ; then
-   usage >&2
+   usage
    exit 1
 fi
 
+
 LANGUAGE="$1"
+
+KBMODEL=
+KBLAYOUT=
+KBVARIANT=
+KBOPTIONS=
+KBBACKSPACE=
 
 . /etc/grml/language-functions
 
-if [ -n "$XKEYBOARD" ] ; then
-  setvalue XKBLAYOUT "$XKEYBOARD"
-fi
+# any kind of warning if no config matched
 
-if [ -z "$DISPLAY" ] ;then
-  if [ "$1" = "de" ] ; then
-    echo "Loading keymap for Germany..."
-    sudo loadkeys i386/qwertz/de-latin1-nodeadkeys.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "at" ] ; then
-    echo "Loading keymap for Austria..."
-    sudo loadkeys i386/qwertz/de-latin1-nodeadkeys.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "ch" ] ; then
-    echo "Loading keymap for Switzerland..."
-    sudo loadkeys i386/qwertz/sg-latin1.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "it" ] ; then
-    echo "Loading keymap for Italy..."
-    sudo loadkeys i386/qwerty/it.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "us" ] ; then
-    echo 'Loading keymap us...'
-    sudo loadkeys i386/qwerty/us-latin1.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "dvorak" ] ; then
-    echo 'Loading keymap dvorak...'
-    sudo loadkeys dvorak
-    echo -e "\nDone."
-  elif [ "$1" = "jp" ] ; then
-    echo 'Loading keymap jp...'
-    sudo loadkeys i386/qwerty/jp106.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "es" ] ; then
-    echo 'Loading keymap es...'
-    sudo loadkeys i386/qwerty/es.kmap.gz
-    echo -e "\nDone."
-  elif [ "$1" = "fr" ] ; then
-    echo 'Loading keymap fr...'
-    sudo loadkeys i386/azerty/fr.kmap.gz
-    echo -e "\nDone."
-  else echo "No valid parameter given.
+setvalue XKBMODEL "$KBMODEL"
+setvalue XKBLAYOUT "$KBLAYOUT"
+setvalue XKBVARIANT "$KBVARIANT"
+setvalue XKBOPTIONS "$KBOPTIONS"
+setvalue BACKSPACE "${KBBACKSPACE:=guess}"
 
-Notice: Use loadkeys on console and setxkbmap when running X for
-modifying keyboard layout. Adjust \$LANG and \$LC_ALL for setting locales." ; exit 1
-  fi
-  # switch to unicode mode on console
+if [ -z "$DISPLAY" ]; then
+  setupcon --keyboard-only 
   case $LANG in *UTF-8) kbd_mode -u ; ;; esac
 else
-  if [ $# = 0 ] ; then
-     usage
-  else
-    if [ "$1" = "de" ] ; then
-      echo "Loading keymap for Germany..."
-      if [ -r "${HOME}"/.Xmodmap.german ] ; then
-        xmodmap "${HOME}"/.Xmodmap.german || setxkbmap de
-      else
-        setxkbmap de
-      fi
-      echo -e "\nDone."
-    elif [ "$1" = "at" ] ; then
-      echo "Loading keymap for Austria..."
-      setxkbmap de
-      echo -e "\nDone."
-    elif [ "$1" = "ch" ] ; then
-      echo "Loading keymap for Switzerland..."
-      setxkbmap ch
-      echo -e "\nDone."
-    elif [ "$1" = "it" ] ; then
-      echo "Loading keymap for Italy..."
-      setxkbmap it
-      echo -e "\nDone."
-    elif [ "$1" = "jp" ] ; then
-      echo "Loading keymap for Japan..."
-      setxkbmap -model jp106 -layout jp
-      echo -e "\nDone."
-    elif [ "$1" = "dvorak" ] ; then
-      echo "Loading keymap dvorak..."
-      setxkbmap dvorak
-      echo -e "\nDone."
-    elif [ "$1"  = "us" ] ; then
-      echo 'Loading keymap us...'
-      if [ -r "${HOME}"/.Xmodmap ] ; then
-        xmodmap "${HOME}"/.Xmodmap || setxkbmap us
-      else
-        setxkbmap us
-      fi
-      echo -e "\nDone."
-    elif [ "$1" = "es" ] ; then
-      echo "Loading keymap es..."
-      setxkbmap es
-      echo -e "\nDone."
-    elif [ "$1" = "fr" ] ; then
-      echo "Loading keymap fr..."
-      setxkbmap fr
-      echo -e "\nDone."
-    else
-      echo "No valid parameter given."
-      echo
-      usage
-      echo
-      echo "Notice: Use loadkeys on console and setxkbmap when running X for
-modifying keyboard layout. Adjust \$LANG and \$LC_ALL for setting locales." ; exit 1
-    fi
-  fi
+  udevadm trigger --subsystem-match=input --action=change
 fi
 
 ## END OF FILE #################################################################
